@@ -24,6 +24,7 @@ namespace MongoMigration
 
 		public async Task Execute()
 		{
+			/*
 			var users = new MigrateUsers(_mediator);
 			await users.Execute();
 			
@@ -35,6 +36,10 @@ namespace MongoMigration
 			
 			var paypalOrders = new MigratePaypalOrders(_db, _mongo);
 			await paypalOrders.Execute();
+			*/
+
+			var scriptPurchases = new MigrateScriptPurchases(_mongo, _db);
+			await scriptPurchases.Execute();
 		}
 	}
 }

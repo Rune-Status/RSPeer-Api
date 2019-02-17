@@ -15,7 +15,7 @@ namespace MongoMigration.Actions
 	{
 		private readonly MongoContext _mongo;
 		private readonly RsPeerContext _db;
-		
+
 		public MigrateScriptAccess(MongoContext mongo, RsPeerContext db)
 		{
 			_mongo = mongo;
@@ -25,17 +25,20 @@ namespace MongoMigration.Actions
 		public async Task Execute()
 		{
 			var access = _mongo.Database.GetCollection<MongoScriptAccess>("ScriptAccess");
-			
+
 			using (var cursor = access.AsQueryable().Where(w => true).ToCursor())
 			{
 				while (await cursor.MoveNextAsync())
 				{
-					var documents = cursor.Current;
-					await OnBatch(documents);
+					using (var transaction = await _db.Database.BeginTransactionAsync())
+					{
+						var documents = cursor.Current;
+						await OnBatch(documents);
+						await _db.SaveChangesAsync();
+						transaction.Commit();
+					}
 				}
 			}
-
-			await _db.SaveChangesAsync();
 		}
 
 		private async Task OnBatch(IEnumerable<MongoScriptAccess> access)
@@ -46,17 +49,18 @@ namespace MongoMigration.Actions
 			var exists = await _db.ScriptAccess.AsQueryable().Where(w => ids.Contains(w.LegacyId)).ToListAsync();
 			var existsDict = exists.ToDictionary(w => w.LegacyId, w => w);
 
-			var scripts = await _db.Scripts.AsQueryable().Where(w => legacyScriptIds.Contains(w.LegacyId)).ToListAsync();
-			
+			var scripts = await _db.Scripts.AsQueryable().Where(w => legacyScriptIds.Contains(w.LegacyId))
+				.ToListAsync();
+
 			var map = scripts.ToDictionary(w => w.LegacyId, w => w.Id);
-			
+
 			list = list.Where(w => !existsDict.ContainsKey(w._id.ToString())).ToList();
 
 			var legacyUserIds = list.Select(w => w.UserId).ToList();
 
 			var userIds = await _db.Users.AsQueryable().Where(w => legacyUserIds.Contains(w.LegacyId)).ToListAsync();
 			var userIdsMap = userIds.ToDictionary(w => w.LegacyId, w => w.Id);
-			
+
 			foreach (var a in list)
 			{
 				var mongoId = a._id.ToString();
@@ -80,7 +84,7 @@ namespace MongoMigration.Actions
 					});
 					continue;
 				}
-				
+
 				var record = new ScriptAccess
 				{
 					Expiration = a.ExpirationDate.GetValueOrDefault(DateTimeOffset.UtcNow.DateTime),

@@ -8,6 +8,7 @@ namespace RSPeer.Domain.Entities
 		public int UserId { get; set; }
 
 		public string PaypalId { get; set; }
+		
 		public decimal Total { get; set; }
 
 		public int Quantity { get; set; }
@@ -21,6 +22,8 @@ namespace RSPeer.Domain.Entities
 		public OrderStatus Status { get; set; }
 
 		public bool Recurring { get; set; }
+		
+		public string LegacyId { get; set; }
 	}
 
 	public enum OrderStatus
