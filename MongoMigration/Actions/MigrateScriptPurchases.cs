@@ -101,7 +101,7 @@ namespace MongoMigration.Actions
 			}
 		}
 
-		private Dictionary<string, Item> skuCache = new Dictionary<string, Item>();
+		private readonly Dictionary<string, Item> skuCache = new Dictionary<string, Item>();
 		
 		private async Task<int> CreateOrGetItem(Script script)
 		{

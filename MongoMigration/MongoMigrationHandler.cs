@@ -36,10 +36,14 @@ namespace MongoMigration
 			
 			var paypalOrders = new MigratePaypalOrders(_db, _mongo);
 			await paypalOrders.Execute();
-			*/
+			
 
 			var scriptPurchases = new MigrateScriptPurchases(_mongo, _db);
 			await scriptPurchases.Execute();
+			*/
+			
+			var balanceChanges = new MigrateBalanceChanges(_mongo, _db);
+			await balanceChanges.Execute();
 		}
 	}
 }
