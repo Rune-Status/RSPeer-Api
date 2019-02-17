@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using MongoDB.Bson;
+using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using MongoMigration.Models;
+using MongoMigration.Util;
 using Nelibur.ObjectMapper;
 using RSPeer.Domain.Entities;
 using RSPeer.Persistence;
@@ -18,11 +20,13 @@ namespace MongoMigration.Actions
 	{
 		private readonly MongoContext _mongo;
 		private readonly RsPeerContext _db;
+		private readonly SpacesService _spacesService;
 
-		public MigrateScripts(MongoContext mongo, RsPeerContext db)
+		public MigrateScripts(MongoContext mongo, RsPeerContext db, IConfiguration configuration)
 		{
 			_mongo = mongo;
 			_db = db;
+			_spacesService = new SpacesService(configuration);
 		}
 
 		public async Task Execute()
@@ -48,34 +52,55 @@ namespace MongoMigration.Actions
 					var existingScriptNames = existing.ToDictionary(w => w.Name, w => w);
 
 					var userIds = await GetUserIds(authors);
-					var scriptListAdd = new List<Script>();
-					var scriptListUpdate = new List<Script>();
-				
-					foreach (var script in enumerable)
-					{
-						var author = script.Author;
-						if (!userIds.ContainsKey(author))
-						{
-							continue;
-						}
-						var userId = userIds[author];
+					var scriptListAdd = new List<ScriptMap>();
+					var scriptListUpdate = new List<ScriptMap>();
 
-						var newScript = ConvertToScript(userId, script);
+					using (var transaction = await _db.Database.BeginTransactionAsync())
+					{
+						foreach (var script in enumerable)
+						{
+							var author = script.Author;
+							if (!userIds.ContainsKey(author))
+							{
+								continue;
+							}
+							var userId = userIds[author];
+
+							var newScript = ConvertToScript(userId, script);
 						
-						if (existingScriptNames.ContainsKey(script.Name))
-						{
-							TinyMapper.Map(newScript, existingScriptNames[script.Name]);
-							scriptListUpdate.Add(existingScriptNames[script.Name]);
+							if (existingScriptNames.ContainsKey(script.Name))
+							{
+								TinyMapper.Map(newScript, existingScriptNames[script.Name]);
+								scriptListUpdate.Add(new ScriptMap
+								{
+									Script = existingScriptNames[script.Name], 
+									OldScriptId = script.Identifier
+								});
+							}
+							else
+							{
+								scriptListAdd.Add(new ScriptMap
+								{
+									Script = ConvertToScript(userId, script),
+									OldScriptId = script.Identifier
+								});
+							}
 						}
-						else
-						{
-							scriptListAdd.Add(ConvertToScript(userId, script));
-						}
+					
+						await _db.Scripts.AddRangeAsync(scriptListAdd.Select(w => w.Script));
+						_db.Scripts.UpdateRange(scriptListUpdate.Select(w => w.Script));
+						await _db.SaveChangesAsync();
+
+						var all = new List<ScriptMap>();
+						all.AddRange(scriptListAdd);
+						all.AddRange(scriptListUpdate);
+						
+						await SaveScriptContent(all);
+						
+						transaction.Commit();
 					}
 					
-					await _db.Scripts.AddRangeAsync(scriptListAdd);
-					_db.Scripts.UpdateRange(scriptListUpdate);
-					await _db.SaveChangesAsync();
+				
 				}
 
 				Console.WriteLine($"Total Batch: { batch}");
@@ -106,13 +131,43 @@ namespace MongoMigration.Actions
 			};
 		}
 
-		private BsonValue SafeGet(BsonDocument document, string key)
+		private async Task<byte[]> GetScriptContent(string identifier)
 		{
-			if (document == null)
+			var script = await _spacesService.Get($"bot/scripts/{identifier}.jar");
+			using (var ms = new MemoryStream())
 			{
-				return null;
+				script.ResponseStream.CopyTo(ms);
+				return ms.ToArray();
 			}
-			return !document.Contains(key) ? null : document[key];
+		}
+
+		private async Task SaveScriptContent(List<ScriptMap> scripts)
+		{
+			var scriptIds = scripts.Select(w => w.Script.Id);
+			var existing = await _db.ScriptContents.AsQueryable().Where(w => scriptIds.Contains(w.ScriptId)).ToListAsync();
+			var existingDict = existing.ToDictionary(w => w.ScriptId, w => w);
+			
+			foreach (var map in scripts)
+			{
+				Console.WriteLine("Loading Script Content For: " + map.Script.Name);
+				var content = new ScriptContent
+				{
+					ScriptId = map.Script.Id,
+					Content = await GetScriptContent(map.OldScriptId)
+				};
+
+				if (existingDict.ContainsKey(map.Script.Id))
+				{
+					existingDict[map.Script.Id].Content = content.Content;
+					_db.ScriptContents.Update(existingDict[map.Script.Id]);
+				}
+				else
+				{
+					_db.ScriptContents.Add(content);
+				}
+			}
+
+			await _db.SaveChangesAsync();
 		}
 
 		private ScriptType ConvertScriptType(int? type)
@@ -128,6 +183,12 @@ namespace MongoMigration.Actions
 			}
 
 			return ScriptType.Free;
+		}
+
+		public class ScriptMap
+		{
+			public Script Script { get; set; }
+			public string OldScriptId { get; set; }
 		}
 	}
 }
