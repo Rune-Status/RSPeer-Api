@@ -23,10 +23,12 @@ namespace MongoMigration
 
 		public async Task Execute()
 		{
-			var users = new MigrateUsers(_mediator);
-			await users.Execute();
+			//var users = new MigrateUsers(_mediator);
+			//await users.Execute();
 			var scripts = new MigrateScripts(_mongo, _db, _configuration);
 			await scripts.Execute();
+			var scriptAccess = new MigrateScriptAccess(_mongo, _db);
+			await scriptAccess.Execute();
 		}
 	}
 }

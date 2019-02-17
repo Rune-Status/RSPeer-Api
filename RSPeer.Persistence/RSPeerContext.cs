@@ -31,6 +31,8 @@ namespace RSPeer.Persistence
 		public DbSet<Order> Orders { get; set; }
 
 		public DbSet<Item> Items { get; set; }
+		
+		public DbSet<Data> Data { get; set; }
 
 		protected override void OnModelCreating(ModelBuilder builder)
 		{
@@ -63,6 +65,10 @@ namespace RSPeer.Persistence
 
 			builder.Entity<User>()
 				.HasIndex(w => w.Email);
+
+
+			builder.Entity<ScriptAccess>().Property(w => w.UserId).IsRequired();
+			builder.Entity<ScriptAccess>().Property(w => w.ScriptId).IsRequired();
 
 			builder.Entity<RunescapeClient>().Property(w => w.UserId).IsRequired();
 			builder.Entity<RunescapeClient>().Property(w => w.LastUpdate).IsRequired();

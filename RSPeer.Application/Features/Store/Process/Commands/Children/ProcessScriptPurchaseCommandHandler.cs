@@ -41,6 +41,7 @@ namespace RSPeer.Application.Features.Store.Process.Commands.Children
 				OrderId = request.Order.Id,
 				UserId = request.Order.UserId,
 				Timestamp = DateTimeOffset.UtcNow,
+				ScriptId = script.Id,
 				Recurring = request.Order.Recurring
 			}, cancellationToken);
 

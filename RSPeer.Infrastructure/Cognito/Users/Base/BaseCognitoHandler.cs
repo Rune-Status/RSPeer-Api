@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -35,6 +36,7 @@ namespace RSPeer.Infrastructure.Cognito.Users.Base
 			var email = a.ContainsKey("email") ? a["email"] : null;
 			return new User
 			{
+				LegacyId = a.ContainsKey("sub") ? Guid.Parse(a["sub"]) : Guid.Empty,
 				IsEmailVerified = a.ContainsKey("email_verified") && bool.Parse(a["email_verified"]),
 				Email = email,
 				Username = a.ContainsKey("preferred_username") ? a["preferred_username"] : email,

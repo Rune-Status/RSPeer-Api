@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
@@ -13,6 +14,8 @@ namespace RSPeer.Domain.Entities
 		public string Email { get; set; }
 		public int Balance { get; set; }
 		public bool IsEmailVerified { get; set; }
+		
+		public Guid LegacyId { get; set; }
 
 		[JsonIgnore] public ICollection<UserGroup> UserGroups { get; } = new List<UserGroup>();
 

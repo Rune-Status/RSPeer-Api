@@ -62,6 +62,11 @@ namespace MongoMigration.Actions
 							var author = script.Author;
 							if (!userIds.ContainsKey(author))
 							{
+								await _db.Data.AddAsync(new Data
+								{
+									Key = "import:script:authorNotExist",
+									Value = author + ":" + script.AuthorUserId
+								});
 								continue;
 							}
 							var userId = userIds[author];
@@ -127,7 +132,8 @@ namespace MongoMigration.Actions
 				LastUpdate = script.LastUpdate,
 				Price = script.Meta?.Price,
 				Type = ConvertScriptType((int?) script.Meta?.Type),
-				Version = (decimal) script.Version
+				Version = (decimal) script.Version,
+				LegacyId = script.Identifier
 			};
 		}
 
