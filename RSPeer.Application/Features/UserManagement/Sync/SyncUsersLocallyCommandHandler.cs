@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Nelibur.ObjectMapper;
 using RSPeer.Domain.Entities;
 using RSPeer.Infrastructure.Cognito.Users.Queries;
 using RSPeer.Persistence;
@@ -28,13 +30,40 @@ namespace RSPeer.Application.Features.UserManagement.Sync
 				Action = async users =>
 				{
 					var dict = new Dictionary<string, User>();
-					foreach (var user in users) dict[user.Email] = user;
+
+					foreach (var user in users)
+					{
+						dict[user.Email] = user;
+					}
+					
 					var emails = dict.Keys.ToList();
-					var existing = await _db.Users.Where(p => emails.Contains(p.Email)).Select(w => w.Email)
+					
+					var existing = await _db.Users.Where(p => emails.Contains(p.Email))
 						.ToListAsync(cancellationToken);
-					foreach (var email in existing) dict.Remove(email);
-					foreach (var pair in dict) _db.Users.Add(pair.Value);
-					await _db.SaveChangesAsync(cancellationToken);
+
+					var existingUsersDict = existing.ToDictionary(w => w.Email, w => w);
+			
+					foreach (var pair in dict)
+					{
+						if (existingUsersDict.ContainsKey(pair.Value.Email))
+						{
+							TinyMapper.Map(pair.Value, existingUsersDict[pair.Value.Email]);
+							_db.Users.Update(existingUsersDict[pair.Value.Email]);
+						}
+						else
+						{
+							_db.Users.Add(pair.Value);				
+						}
+					}
+					
+					try
+					{
+						await _db.SaveChangesAsync(cancellationToken);
+					}
+					catch (Exception e)
+					{
+						Console.WriteLine(e);
+					}
 				}
 			}, cancellationToken);
 		}

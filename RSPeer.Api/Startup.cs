@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MongoMigration;
 using RSPeer.Api.Activators;
 using RSPeer.Api.Mappers;
 using RSPeer.Application.Features.Scripts.Commands.CreateScript;
@@ -51,6 +52,9 @@ namespace RSPeer.Api
 				builder.ConfigureWarnings(warnings => warnings.Throw(RelationalEventId.QueryClientEvaluationWarning));
 			});
 
+			services.AddSingleton<MongoContext>();
+			services.AddSingleton<MongoMigrationHandler>();
+			
 			services.AddHangfire(config =>
 				config.UsePostgreSqlStorage(Configuration.GetConnectionString("Postgres")));
 
@@ -74,8 +78,8 @@ namespace RSPeer.Api
 
 			GlobalConfiguration.Configuration.UseActivator(new HangfireActivator(app.ApplicationServices));
 
-			app.UseHangfireServer();
-			app.UseHangfireDashboard();
+			//app.UseHangfireServer();
+			//app.UseHangfireDashboard();
 
 			app.UseHttpsRedirection();
 			app.UseMvc();

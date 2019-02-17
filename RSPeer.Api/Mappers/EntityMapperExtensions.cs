@@ -19,6 +19,11 @@ namespace RSPeer.Api.Mappers
 				config.Ignore(w => w.Sku);
 				config.Ignore(w => w.Id);
 			});
+			
+			TinyMapper.Bind<User, User>(config =>
+			{
+				config.Ignore(w => w.Id);
+			});
 		}
 	}
 }

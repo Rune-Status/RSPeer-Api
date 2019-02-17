@@ -30,9 +30,12 @@ namespace RSPeer.Infrastructure.Cognito.Users.Queries
 					UserPoolId = UserPoolId,
 					PaginationToken = paginationToken
 				});
-				if (string.IsNullOrEmpty(res.PaginationToken) || res.Users.Count == 0) return;
 				var users = res.Users.Select(t => ParseToUser(t.Attributes));
 				await action(users);
+				if (string.IsNullOrEmpty(res.PaginationToken))
+				{
+					return;
+				}
 				await ListUsers(action, res.PaginationToken);
 			}
 		}

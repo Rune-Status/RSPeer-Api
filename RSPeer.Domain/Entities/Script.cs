@@ -31,13 +31,7 @@ namespace RSPeer.Domain.Entities
 
 		public ScriptContent ScriptContent { get; set; }
 	}
-
-	public enum ScriptStatus
-	{
-		Pending,
-		Live
-	}
-
+	
 	public enum ScriptCategory
 	{
 		Agility,
@@ -62,6 +56,12 @@ namespace RSPeer.Domain.Entities
 		Thieving,
 		Woodcutting,
 		Questing
+	}
+
+	public enum ScriptStatus
+	{
+		Pending,
+		Live
 	}
 
 	public enum ScriptType

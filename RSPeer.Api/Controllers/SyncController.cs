@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using RSPeer.Api.Controllers.Base;
@@ -9,7 +10,14 @@ namespace RSPeer.Api.Controllers
 	{
 		public async Task<IActionResult> Users()
 		{
-			return Ok(await Mediator.Send(new SyncUsersLocallyCommand()));
+			try
+			{
+				return Ok(await Mediator.Send(new SyncUsersLocallyCommand()));
+			}
+			catch (Exception e)
+			{
+				return BadRequest(e);
+			}
 		}
 	}
 }
